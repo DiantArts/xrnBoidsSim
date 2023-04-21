@@ -2,11 +2,12 @@
 // Precompilled headers
 ///////////////////////////////////////////////////////////////////////////
 #include <pch.hpp>
+#include <xrn/BoidsSim/Scene.hpp>
 
 ///////////////////////////////////////////////////////////////////////////
 auto main()
     -> int
 {
-    ::fmt::print("{}\n", "hello world");
+    ::xrn::bsim::Scene{}.run();
     return EXIT_SUCCESS;
 }
