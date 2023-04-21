@@ -195,13 +195,14 @@ void ::xrn::bsim::Scene::createBoid(
 
     registry.emplace<Scene::Velocity>(
         entity
-        , 0.1
-        // , ::xrn::rng(0, 360)
-        // , ::xrn::rng(0, 360)
-        // , ::xrn::rng(0, 360)
+        , Scene::BoidBehavior::maxSpeed
+        // , ::xrn::rng(
+            // Scene::BoidBehavior::minSpeed * 1000
+            // , Scene::BoidBehavior::maxSpeed * 1000
+        // ) / 1000.f
     );
 
-    // registry.emplace<Scene::Control>(entity, true);
+    // registry.emplace<Scene::Control>(entity);
     // registry.get<Scene::Control>(entity).setSpeed(
         // Scene::BoidBehavior::defaultSpeed
     // ).startMovingForward();

@@ -36,7 +36,8 @@ public:
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     static inline constexpr const ::std::size_t numberOfBoids{ 200 };
-    static inline constexpr const ::std::size_t defaultSpeed{ 1000 };
+    static inline constexpr const float minSpeed{ 0.05 };
+    static inline constexpr const float maxSpeed{ 0.15 };
     static inline constexpr const float defaultScale{ 0.2f };
 
     struct Boid {}; // Signature type to assign
@@ -80,7 +81,7 @@ public:
             // desiredHeading = ::glm::normalize(const vec<L, T, Q> &x);
         }
 
-        rotation.set(desiredHeading);
+        // rotation = desiredHeading;
     }
 
 
