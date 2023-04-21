@@ -35,7 +35,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
-    static inline constexpr const ::std::size_t numberOfBoids{ 100 };
+    static inline constexpr const ::std::size_t numberOfBoids{ 200 };
     static inline constexpr const ::std::size_t defaultSpeed{ 1000 };
     static inline constexpr const float defaultScale{ 0.2f };
 

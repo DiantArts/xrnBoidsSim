@@ -25,6 +25,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     using Position = ::xrn::engine::component::Position;
+    using Velocity = ::xrn::engine::component::Velocity;
     using Rotation = ::xrn::engine::component::Rotation;
     using Scale = ::xrn::engine::component::Scale;
     using Transform3d = ::xrn::engine::component::Transform3d;

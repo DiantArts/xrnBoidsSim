@@ -9,6 +9,8 @@
 #include <xrn/BoidsSim/Scene.hpp>
 #include "xrn/BoidsSim/System/BoidBehavior.hpp"
 
+// #define FORCE_KEEP_IN_MAP
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -73,7 +75,7 @@ auto ::xrn::bsim::Scene::onUpdate()
 auto ::xrn::bsim::Scene::onPostUpdate()
     -> bool
 {
-
+#ifdef FORCE_KEEP_IN_MAP
     auto boids{ this->getRegistry().view<Scene::Position, Scene::BoidBehavior::Boid>() };
     for (auto [ boid, position ] : boids.each()) {
         auto& pos{ position.get() };
@@ -93,6 +95,7 @@ auto ::xrn::bsim::Scene::onPostUpdate()
             position.setZ(this->mapSize.z / 2);
         }
     }
+#endif // FORCE_KEEP_IN_MAP
     return true;
 }
 
@@ -102,12 +105,12 @@ auto ::xrn::bsim::Scene::onTick(
 ) -> bool
 {
 
-    // auto boids{ this->getRegistry().view<
-        // Scene::Position, Scene::Rotation, Scene::Control, Scene::BoidBehavior::Boid
-    // >() };
-    // for (auto [ boid, position, rotation, control ] : boids.each()) {
+    auto boids{ this->getRegistry().view<
+        Scene::Position, Scene::Rotation, Scene::Control, Scene::BoidBehavior::Boid
+    >() };
+    for (auto [ boid, position, rotation, control ] : boids.each()) {
         // m_boidBehavior.update(boid, position, rotation, control, boids);
-    // }
+    }
     return true;
 }
 
@@ -176,27 +179,33 @@ void ::xrn::bsim::Scene::createBoid(
         , ::xrn::engine::vulkan::Model::createFromFile(this->getVulkanDevice(), "Cube")
     );
 
-    registry.emplace<Scene::BoidBehavior::Boid>(entity);
     registry.emplace<Scene::Position>(
         entity
-        , ::xrn::rng(static_cast<int>(-mapSize.x / 2), static_cast<int>(mapSize.x / 2))
-        , ::xrn::rng(static_cast<int>(-mapSize.y / 2), static_cast<int>(mapSize.y / 2))
-        , ::xrn::rng(static_cast<int>(-mapSize.z / 2), static_cast<int>(mapSize.z / 2))
+        // , ::xrn::rng(static_cast<int>(-mapSize.x / 2), static_cast<int>(mapSize.x / 2))
+        // , ::xrn::rng(static_cast<int>(-mapSize.y / 2), static_cast<int>(mapSize.y / 2))
+        // , ::xrn::rng(static_cast<int>(-mapSize.z / 2), static_cast<int>(mapSize.z / 2))
     );
+
     registry.emplace<Scene::Rotation>(
         entity
         , ::xrn::rng(0, 360)
         , ::xrn::rng(0, 360)
         , ::xrn::rng(0, 360)
     );
-    auto r{ registry.get<Scene::Rotation>(entity) };
 
-    registry.emplace<Scene::Scale>(
-        entity, Scene::BoidBehavior::defaultScale
+    registry.emplace<Scene::Velocity>(
+        entity
+        , 0.1
+        // , ::xrn::rng(0, 360)
+        // , ::xrn::rng(0, 360)
+        // , ::xrn::rng(0, 360)
     );
 
-    registry.emplace<Scene::Control>(entity, true);
-    registry.get<Scene::Control>(entity).setSpeed(
-        Scene::BoidBehavior::defaultSpeed
-    ).startMovingForward();
+    // registry.emplace<Scene::Control>(entity, true);
+    // registry.get<Scene::Control>(entity).setSpeed(
+        // Scene::BoidBehavior::defaultSpeed
+    // ).startMovingForward();
+
+    registry.emplace<Scene::Scale>(entity, Scene::BoidBehavior::defaultScale);
+    registry.emplace<Scene::BoidBehavior::Boid>(entity);
 }
