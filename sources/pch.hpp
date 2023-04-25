@@ -130,7 +130,7 @@ using ::std::chrono_literals::operator""ms;
 // #define PRINT_ASSERTS
 // #define FORCE_PRINT
 // #define NO_DEBUG
-#include <xrn/Log/Logger.hpp>
+#include <xrn/Log.hpp>
 #include <xrn/Util.hpp>
 #include <xrn/Meta.hpp>
 #include <xrn/Ecs.hpp>

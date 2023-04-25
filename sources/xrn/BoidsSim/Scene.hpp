@@ -28,6 +28,7 @@ public:
     using Velocity = ::xrn::engine::component::Velocity;
     using Acceleration = ::xrn::engine::component::Acceleration;
     using Rotation = ::xrn::engine::component::Rotation;
+    using Direction = ::xrn::engine::component::Direction;
     using Scale = ::xrn::engine::component::Scale;
     using Mass = ::xrn::engine::component::Mass;
     using Transform3d = ::xrn::engine::component::Transform3d;
@@ -44,7 +45,8 @@ public:
     ///////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
-    static constexpr const ::glm::vec3 mapSize{ 500.0f, 250.0f, 250.0f };
+    static inline constexpr const ::glm::vec3 mapSize{ 500.0f, 250.0f, 250.0f };
+    static inline constexpr const ::std::size_t numberrOfThread{ 10 };
 
 
 
@@ -150,6 +152,9 @@ private:
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
     Scene::BoidBehavior m_boidBehavior;
+
+    ::std::size_t m_entityIndex{ 0 };
+    ::std::vector<::std::vector<::entt::entity>> m_entities;
 
 };
 

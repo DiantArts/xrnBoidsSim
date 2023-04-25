@@ -32,7 +32,8 @@ public:
     ///////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
-    static inline constexpr const ::std::size_t numberOfBoids{ 1000 };
+    // static inline constexpr const ::std::size_t numberOfBoids{ 1000 };
+    static inline constexpr const ::std::size_t numberOfBoids{ 0 };
     static inline constexpr const float minSpeed{ 25.f };
     static inline constexpr const float maxSpeed{ 50.f };
 

@@ -31,9 +31,13 @@
     auto& registry{ this->getRegistry() };
     { // camera
         auto entity{ this->getCameraId() };
-        // registry.emplace<Scene::Control>(entity).setSpeed(25000);
+        registry.emplace<Scene::Control>(entity);
         registry.emplace<Scene::Position>(entity, ::glm::vec3{ 0, 0, -this->mapSize.z * 2 });
         registry.emplace<Scene::Rotation>(entity, ::glm::vec3{ 90.0f, .0f, .0f });
+        // registry.emplace<Scene::Acceleration>(entity);
+        registry.emplace<Scene::Velocity>(entity).setMaximumSpeed(1000.f);
+        // registry.emplace<Scene::Mass>(entity, 1);
+        registry.emplace<Scene::Direction>(entity, ::glm::vec3{ 90.0f, .0f, .0f });
     }
 
     // show map limits
@@ -166,7 +170,18 @@ void ::xrn::bsim::Scene::createLight(
 void ::xrn::bsim::Scene::createBoid()
 {
     auto& registry{ this->getRegistry() };
-    auto entity{ registry.create() };
+
+    if (m_entities.size() < Scene::numberrOfThread) {
+        m_entities.emplace_back();
+    }
+
+    m_entities[m_entityIndex].push_back(registry.create());
+    auto entity{ m_entities[m_entityIndex].back() };
+
+    ++m_entityIndex;
+    if (m_entityIndex >= Scene::numberrOfThread) {
+        m_entityIndex = 0;
+    }
 
     registry.emplace<Scene::Transform3d>(
         entity
@@ -194,7 +209,7 @@ void ::xrn::bsim::Scene::createBoid()
     ).setMagnitude(static_cast<float>(::xrn::rng(
             static_cast<int>(Scene::BoidBehavior::minSpeed) * 1000
             , static_cast<int>(Scene::BoidBehavior::maxSpeed) * 1000
-        ) / 1000.f)
+        )) / 1000.f
     ).setMaximumSpeed(Scene::BoidBehavior::maxSpeed);
     // velocity.setMagnitude(10);
 
