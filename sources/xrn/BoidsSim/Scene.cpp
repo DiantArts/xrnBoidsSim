@@ -34,8 +34,7 @@
             , Scene::BoidBehavior::mapSize.y / 2
             , -Scene::BoidBehavior::mapSize.z * 2.5f
         });
-        this->getRegistry().emplace<Scene::Rotation>(entity, ::glm::vec3{ 90.0f, .0f, .0f });
-        this->getRegistry().emplace<Scene::Direction>(entity, ::glm::vec3{ 90.0f, .0f, .0f });
+        this->getRegistry().emplace<Scene::Direction>(entity, ::glm::vec3{ 0.0f, .0f, 1.0f });
         this->getRegistry().emplace<Scene::Velocity>(entity).setMaximumSpeed(1000.f);
     }
 
@@ -123,6 +122,7 @@ void ::xrn::bsim::Scene::createBoids()
     this->getRegistry().storage<Scene::Position>().reserve(Scene::BoidBehavior::numberOfBoids);
     this->getRegistry().storage<Scene::Velocity>().reserve(Scene::BoidBehavior::numberOfBoids);
     this->getRegistry().storage<Scene::Acceleration>().reserve(Scene::BoidBehavior::numberOfBoids);
+    this->getRegistry().storage<Scene::Scale>().reserve(Scene::BoidBehavior::numberOfBoids);
     this->getRegistry().storage<Scene::BoidBehavior::Boid>().reserve(Scene::BoidBehavior::numberOfBoids);
 
     // find size of each thread vectors
@@ -133,6 +133,8 @@ void ::xrn::bsim::Scene::createBoids()
     for (auto& vector : m_entities) {
         vector.reserve(containerSize);
     }
+
+    auto modelBuilder{ ::xrn::engine::vulkan::Model::createModelBuilder("Boid") };
 
     // create the boids
     auto vectorIndex{ 0uz };
@@ -147,7 +149,9 @@ void ::xrn::bsim::Scene::createBoids()
 
         auto entity{ this->getRegistry().create() };
         m_entities[vectorIndex].push_back(entity);
-        this->initBoid(entity);
+
+        auto model{ ::std::make_unique<::xrn::engine::vulkan::Model>(this->getVulkanDevice(), modelBuilder) };
+        this->initBoid(entity, ::std::move(model));
     }
 
     // create the threads
@@ -159,12 +163,10 @@ void ::xrn::bsim::Scene::createBoids()
 ///////////////////////////////////////////////////////////////////////////
 void ::xrn::bsim::Scene::initBoid(
     ::entt::entity entity
+    , ::std::unique_ptr<::xrn::engine::vulkan::Model> model
 )
 {
-    this->getRegistry().emplace<Scene::Transform3d>(
-        entity
-        , ::xrn::engine::vulkan::Model::createFromFile(this->getVulkanDevice(), "Cube")
-    );
+    this->getRegistry().emplace<Scene::Transform3d>(entity, ::std::move(model));
 
     const auto& position{ this->getRegistry().emplace<Scene::Position>(
         entity
@@ -175,6 +177,7 @@ void ::xrn::bsim::Scene::initBoid(
 
     this->getRegistry().emplace<Scene::Velocity>(
         entity
+        // , 100, 0, 0
         , ::xrn::rng(-100, 100)
         , ::xrn::rng(-100, 100)
         , ::xrn::rng(-100, 100)
@@ -185,6 +188,9 @@ void ::xrn::bsim::Scene::initBoid(
     ).setMaximumSpeed(Scene::BoidBehavior::maxSpeed);
 
     this->getRegistry().emplace<Scene::Acceleration>(entity);
+
+    this->getRegistry().emplace<Scene::Scale>(entity, .12f);
+    this->getRegistry().emplace<Scene::Direction>(entity);
 
     this->getRegistry().emplace<Scene::BoidBehavior::Boid>(entity);
 

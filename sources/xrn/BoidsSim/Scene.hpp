@@ -29,7 +29,6 @@ public:
     using Position = ::xrn::engine::component::Position;
     using Velocity = ::xrn::engine::component::Velocity;
     using Acceleration = ::xrn::engine::component::Acceleration;
-    using Rotation = ::xrn::engine::component::Rotation;
     using Direction = ::xrn::engine::component::Direction;
     using Scale = ::xrn::engine::component::Scale;
     using Mass = ::xrn::engine::component::Mass;
@@ -51,7 +50,7 @@ public:
     /// Number of threads running
     ///
     ///////////////////////////////////////////////////////////////////////////
-    static inline constexpr const ::std::size_t numberOfThread{ 10 };
+    static inline constexpr const ::std::size_t numberOfThread{ 20 };
 
 
 
@@ -143,6 +142,7 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     void initBoid(
         ::entt::entity entity
+        , ::std::unique_ptr<::xrn::engine::vulkan::Model> model
     );
 
     ///////////////////////////////////////////////////////////////////////////

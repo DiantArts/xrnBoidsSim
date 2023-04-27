@@ -44,8 +44,8 @@ public:
     /// Number of boid running
     ///
     ///////////////////////////////////////////////////////////////////////////
-    static inline constexpr const ::std::size_t numberOfBoids{ 50'000 };
-    // static inline constexpr const ::std::size_t numberOfBoids{ 1'000 };
+    static inline constexpr const ::std::size_t numberOfBoids{ 5'000 };
+    // static inline constexpr const ::std::size_t numberOfBoids{ 100 };
 
     ///////////////////////////////////////////////////////////////////////////
     /// Min speed of a boid
