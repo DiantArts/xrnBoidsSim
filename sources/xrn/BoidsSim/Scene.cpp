@@ -8,10 +8,8 @@
 // Headers
 ///////////////////////////////////////////////////////////////////////////
 #include <xrn/BoidsSim/Scene.hpp>
-#include "xrn/BoidsSim/System/BoidBehavior.hpp"
 
-#define FORCE_KEEP_IN_MAP
-
+#define ENABLE_SPACE_PARTITIONING
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -28,37 +26,20 @@
     // no light will be rendered, so make ambient light at max
     this->getFrameInfo().ubo.intensity() = 1;
 
-    auto& registry{ this->getRegistry() };
     { // camera
         auto entity{ this->getCameraId() };
-        registry.emplace<Scene::Control>(entity);
-        registry.emplace<Scene::Position>(entity, ::glm::vec3{ 0, 0, -this->mapSize.z * 2 });
-        registry.emplace<Scene::Rotation>(entity, ::glm::vec3{ 90.0f, .0f, .0f });
-        // registry.emplace<Scene::Acceleration>(entity);
-        registry.emplace<Scene::Velocity>(entity).setMaximumSpeed(1000.f);
-        // registry.emplace<Scene::Mass>(entity, 1);
-        registry.emplace<Scene::Direction>(entity, ::glm::vec3{ 90.0f, .0f, .0f });
+        this->getRegistry().emplace<Scene::Control>(entity);
+        this->getRegistry().emplace<Scene::Position>(entity, ::glm::vec3{
+            Scene::BoidBehavior::mapSize.x / 2
+            , Scene::BoidBehavior::mapSize.y / 2
+            , -Scene::BoidBehavior::mapSize.z * 2.5f
+        });
+        this->getRegistry().emplace<Scene::Rotation>(entity, ::glm::vec3{ 90.0f, .0f, .0f });
+        this->getRegistry().emplace<Scene::Direction>(entity, ::glm::vec3{ 90.0f, .0f, .0f });
+        this->getRegistry().emplace<Scene::Velocity>(entity).setMaximumSpeed(1000.f);
     }
 
-    // show map limits
-    this->createLight({ this->mapSize.x / 2, this->mapSize.y / 2, this->mapSize.z / 2 });
-    this->createLight({ this->mapSize.x / -2, this->mapSize.y / 2, this->mapSize.z / 2 });
-    this->createLight({ this->mapSize.x / 2, this->mapSize.y / -2, this->mapSize.z / 2 });
-    this->createLight({ this->mapSize.x / -2, this->mapSize.y / -2, this->mapSize.z / 2 });
-    this->createLight({ this->mapSize.x / 2, this->mapSize.y / 2, this->mapSize.z / -2 });
-    this->createLight({ this->mapSize.x / 2, this->mapSize.y / -2, this->mapSize.z / -2 });
-    this->createLight({ this->mapSize.x / -2, this->mapSize.y / 2, this->mapSize.z / -2 });
-    this->createLight({ this->mapSize.x / -2, this->mapSize.y / -2, this->mapSize.z / -2 });
-    // this->createLight({ .0f, .0f, .0f }); // show map center
-
-    // this->createBoid();
-    this->getRegistry().reserve(Scene::BoidBehavior::numberOfBoids);
-    for (auto i{ 0uz }; i < Scene::BoidBehavior::numberOfBoids; ++i) {
-        if (i % 1'000 == 0 && i) {
-            XRN_INFO("{} boids created", i)
-        }
-        this->createBoid();
-    }
+    this->createBoids();
 }
 
 
@@ -74,62 +55,43 @@
 auto ::xrn::bsim::Scene::onUpdate()
     -> bool
 {
-    return true;
-}
-
-///////////////////////////////////////////////////////////////////////////
-auto ::xrn::bsim::Scene::onPostUpdate()
-    -> bool
-{
-#ifdef FORCE_KEEP_IN_MAP
-    auto boids{ this->getRegistry().view<Scene::Position, Scene::BoidBehavior::Boid>() };
-    for (auto [ boid, position ] : boids.each()) {
-        if (position.getX() > this->mapSize.x / 2) {
-            position.addX(-this->mapSize.x);
-        } else if (position.getX() < -this->mapSize.x / 2) {
-            position.addX(this->mapSize.x);
-        }
-        if (position.getY() > this->mapSize.y / 2) {
-            position.addY(-this->mapSize.y);
-        } else if (position.getY() < -this->mapSize.y / 2) {
-            position.addY(this->mapSize.y);
-        }
-        if (position.getZ() > this->mapSize.z / 2) {
-            position.addZ(-this->mapSize.z);
-        } else if (position.getZ() < -this->mapSize.z / 2) {
-            position.addZ(this->mapSize.z);
+    if constexpr (Scene::BoidBehavior::enableSpacePartitioning) {
+        for (::std::uint16_t x{ 0 }; x < static_cast<::std::uint16_t>(m_partitions.size()); ++x) {
+            for (::std::uint16_t y{ 0 }; y < static_cast<::std::uint16_t>(m_partitions[x].size()); ++y) {
+                for (::std::uint16_t z{ 0 }; z < static_cast<::std::uint16_t>(m_partitions[x][y].size()); ++z) {
+                    for (auto it{ m_partitions[x][y][z].begin() }; it != m_partitions[x][y][z].end();) {
+                        const auto entity{ *it };
+                        const auto& position{ this->getRegistry().get<Scene::Position>(entity) };
+                        const auto index{ this->getPartitionIndex(*position) };
+                        if (index.x != x || index.y != y || index.z != z) {
+                            it = m_partitions[x][y][z].erase(it);
+                            m_partitions[index.x][index.y][index.z].push_back(entity);
+                        } else {
+                            ++it;
+                        }
+                    }
+                }
+            }
         }
     }
-#endif // FORCE_KEEP_IN_MAP
+    m_threads.runOnce();
     return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// auto ::xrn::bsim::Scene::onTick(
-    // ::xrn::Time deltaTime [[ maybe_unused ]]
-// ) -> bool
+// auto ::xrn::bsim::Scene::onPostUpdate()
+    // -> bool
 // {
-    // auto boids{ this->getRegistry().view<
-        // Scene::Position
-        // , Scene::Velocity
-        // , Scene::Acceleration
-        // , Scene::BoidBehavior::Boid
-    // >() };
-
-    // for (auto [ boid, position, velocity, acceleration ] : boids.each()) {
-        // m_boidBehavior.update(boid, position, velocity, acceleration, boids);
-    // }
-
     // return true;
 // }
 
 ///////////////////////////////////////////////////////////////////////////
-void ::xrn::bsim::Scene::onKeyPressed(
-    ::std::int16_t keyCode [[ maybe_unused ]]
-)
-{
-    // this->createBoid();
-}
+// void ::xrn::bsim::Scene::onKeyPressed(
+    // ::std::int16_t keyCode [[ maybe_unused ]]
+// )
+// {
+    // this->createBoids();
+// }
 
 ///////////////////////////////////////////////////////////////////////////
 // void ::xrn::bsim::Scene::onKeyReleased(
@@ -153,84 +115,168 @@ void ::xrn::bsim::Scene::onKeyPressed(
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////
-void ::xrn::bsim::Scene::createLight(
-    const ::glm::vec3& pos
-)
+void ::xrn::bsim::Scene::createBoids()
 {
-    auto& registry{ this->getRegistry() };
-    auto entity{ registry.create() };
+    // preallocate
+    this->getRegistry().reserve(Scene::BoidBehavior::numberOfBoids);
+    this->getRegistry().storage<Scene::Transform3d>().reserve(Scene::BoidBehavior::numberOfBoids);
+    this->getRegistry().storage<Scene::Position>().reserve(Scene::BoidBehavior::numberOfBoids);
+    this->getRegistry().storage<Scene::Velocity>().reserve(Scene::BoidBehavior::numberOfBoids);
+    this->getRegistry().storage<Scene::Acceleration>().reserve(Scene::BoidBehavior::numberOfBoids);
+    this->getRegistry().storage<Scene::BoidBehavior::Boid>().reserve(Scene::BoidBehavior::numberOfBoids);
 
-    registry.emplace<Scene::PointLight>(
-        entity, glm::vec3{ .25f, 1.f, 1.f }, 4.f, 1.f
-    );
-    registry.emplace<Scene::Position>(entity, pos);
+    // find size of each thread vectors
+    ::std::size_t containerSize{ (Scene::BoidBehavior::numberOfBoids % Scene::numberOfThread == 0)
+        ? Scene::BoidBehavior::numberOfBoids / Scene::numberOfThread
+        : Scene::BoidBehavior::numberOfBoids / Scene::numberOfThread + 1
+    };
+    for (auto& vector : m_entities) {
+        vector.reserve(containerSize);
+    }
+
+    // create the boids
+    auto vectorIndex{ 0uz };
+    for (auto i{ 0uz }; i < Scene::BoidBehavior::numberOfBoids; ++i) {
+        if (i % 1'000 == 0 && i) {
+            XRN_INFO("{} boids created", i)
+        }
+
+        if (m_entities[vectorIndex].size() >= containerSize) {
+            ++vectorIndex;
+        }
+
+        auto entity{ this->getRegistry().create() };
+        m_entities[vectorIndex].push_back(entity);
+        this->initBoid(entity);
+    }
+
+    // create the threads
+    for (auto i{ 0uz }; i < Scene::numberOfThread; ++i) {
+        m_threads.push(&Scene::updateBoids, this, i);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
-void ::xrn::bsim::Scene::createBoid()
+void ::xrn::bsim::Scene::initBoid(
+    ::entt::entity entity
+)
 {
-    auto& registry{ this->getRegistry() };
-
-    if (m_entities.size() < Scene::numberrOfThread) {
-        m_entities.emplace_back();
-    }
-
-    m_entities[m_entityIndex].push_back(registry.create());
-    auto entity{ m_entities[m_entityIndex].back() };
-
-    ++m_entityIndex;
-    if (m_entityIndex >= Scene::numberrOfThread) {
-        m_entityIndex = 0;
-    }
-
-    registry.emplace<Scene::Transform3d>(
+    this->getRegistry().emplace<Scene::Transform3d>(
         entity
         , ::xrn::engine::vulkan::Model::createFromFile(this->getVulkanDevice(), "Cube")
     );
 
-    registry.emplace<Scene::Position>(
+    const auto& position{ this->getRegistry().emplace<Scene::Position>(
         entity
-        // , 0.f, 0.f, -this->mapSize.z / 2
-        // , -50, 50, 0
-        , ::xrn::rng(static_cast<int>(-mapSize.x / 2), static_cast<int>(mapSize.x / 2))
-        , ::xrn::rng(static_cast<int>(-mapSize.y / 2), static_cast<int>(mapSize.y / 2))
-        , ::xrn::rng(static_cast<int>(-mapSize.z / 2), static_cast<int>(mapSize.z / 2))
-        // , -this->mapSize.z / 2
-    );
+        , ::xrn::rng(0, static_cast<int>(Scene::BoidBehavior::mapSize.x))
+        , ::xrn::rng(0, static_cast<int>(Scene::BoidBehavior::mapSize.y))
+        , ::xrn::rng(0, static_cast<int>(Scene::BoidBehavior::mapSize.z))
+    ) };
 
-    registry.emplace<Scene::Velocity>(
+    this->getRegistry().emplace<Scene::Velocity>(
         entity
-        // , 100.f, 0.f, 0.f
-        // , Scene::BoidBehavior::maxSpeed
         , ::xrn::rng(-100, 100)
         , ::xrn::rng(-100, 100)
         , ::xrn::rng(-100, 100)
-        // , 0
     ).setMagnitude(static_cast<float>(::xrn::rng(
             static_cast<int>(Scene::BoidBehavior::minSpeed) * 1000
             , static_cast<int>(Scene::BoidBehavior::maxSpeed) * 1000
         )) / 1000.f
     ).setMaximumSpeed(Scene::BoidBehavior::maxSpeed);
-    // velocity.setMagnitude(10);
 
-    registry.emplace<Scene::Acceleration>(
-        entity
-        // , 1.f
-    );
+    this->getRegistry().emplace<Scene::Acceleration>(entity);
 
-    // registry.emplace<Scene::Mass>(
-        // entity
-        // , 1.f
-    // );
+    this->getRegistry().emplace<Scene::BoidBehavior::Boid>(entity);
 
-    // registry.emplace<Scene::Scale>(
-        // entity
-        // , 5.f
-    // );
+    if constexpr (Scene::BoidBehavior::enableSpacePartitioning) {
+        const auto index{ this->getPartitionIndex(*position) };
+        m_partitions[index.x][index.y][index.z].push_back(entity);
+    }
+}
 
-    // registry.emplace<Scene::Control>(entity).setSpeed(
-        // Scene::BoidBehavior::defaultSpeed
-    // ).startMovingForward();
+///////////////////////////////////////////////////////////////////////////
+auto ::xrn::bsim::Scene::getPartitionIndex(
+    const ::glm::vec3& position
+) -> ::xrn::bsim::system::detail::PartitionIndex
+{
+    ::xrn::bsim::system::detail::PartitionIndex index;
 
-    registry.emplace<Scene::BoidBehavior::Boid>(entity);
+    if (position.x < 0) {
+        index.x = 0;
+    } else if (position.x >= Scene::BoidBehavior::mapSize.x) {
+        index.x = Scene::BoidBehavior::numberOfPartitions.x - 1;
+    } else {
+        index.x = static_cast<::std::uint16_t>(position.x) / static_cast<::std::uint16_t>(Scene::BoidBehavior::partitionSize.x);
+    }
+
+    if (position.y < 0) {
+        index.y = 0;
+    } else if (position.y >= Scene::BoidBehavior::mapSize.y) {
+        index.y = Scene::BoidBehavior::numberOfPartitions.y - 1;
+    } else {
+        index.y = static_cast<::std::uint16_t>(position.y) / static_cast<::std::uint16_t>(Scene::BoidBehavior::partitionSize.y);
+    }
+
+    if (position.z < 0) {
+        index.z = 0;
+    } else if (position.z >= Scene::BoidBehavior::mapSize.z) {
+        index.z = Scene::BoidBehavior::numberOfPartitions.z - 1;
+    } else {
+        index.z = static_cast<::std::uint16_t>(position.z) / static_cast<::std::uint16_t>(Scene::BoidBehavior::partitionSize.z);
+    }
+
+    return index;
+}
+
+///////////////////////////////////////////////////////////////////////////
+auto ::xrn::bsim::Scene::getPartitionIndexBegin(
+    const ::xrn::bsim::system::detail::PartitionIndex& index
+) -> ::xrn::bsim::system::detail::PartitionIndex
+{
+    return ::xrn::bsim::system::detail::PartitionIndex{
+        index.x == 0 ? 0 : index.x - 1
+        , index.y == 0 ? 0 : index.y - 1
+        , index.z == 0 ? 0 : index.z - 1
+    };
+}
+
+///////////////////////////////////////////////////////////////////////////
+auto ::xrn::bsim::Scene::getPartitionIndexEnd(
+    const ::xrn::bsim::system::detail::PartitionIndex& index
+) -> ::xrn::bsim::system::detail::PartitionIndex
+{
+    return ::xrn::bsim::system::detail::PartitionIndex{
+        index.x >= Scene::BoidBehavior::numberOfPartitions.x - 1 ? Scene::BoidBehavior::numberOfPartitions.x - 1 : index.x + 1
+        , index.y >= Scene::BoidBehavior::numberOfPartitions.y - 1 ? Scene::BoidBehavior::numberOfPartitions.y - 1 : index.y + 1
+        , index.z >= Scene::BoidBehavior::numberOfPartitions.z - 1 ? Scene::BoidBehavior::numberOfPartitions.z - 1 : index.z + 1
+    };
+}
+
+///////////////////////////////////////////////////////////////////////////
+void ::xrn::bsim::Scene::updateBoids(
+    ::std::size_t threadIndex
+)
+{
+    auto boids{ this->getRegistry().view<
+        Scene::Position
+        , Scene::Velocity
+        , Scene::Acceleration
+        , Scene::BoidBehavior::Boid
+    >() };
+
+    for (auto boid : m_entities[threadIndex]) {
+        auto& position{ this->getRegistry().get<Scene::Position>(boid) };
+        auto& velocity{ this->getRegistry().get<Scene::Velocity>(boid) };
+        auto& acceleration{ this->getRegistry().get<Scene::Acceleration>(boid) };
+
+        auto index{ this->getPartitionIndex(*position) };
+        auto indexBegin{ this->getPartitionIndexBegin(index) };
+        auto indexEnd{ this->getPartitionIndexEnd(index) };
+
+        if constexpr (Scene::BoidBehavior::enableSpacePartitioning) {
+            m_boidBehavior.update(boid, position, velocity, acceleration, m_partitions, indexBegin, indexEnd, this->getRegistry());
+        } else {
+            m_boidBehavior.update(boid, position, velocity, acceleration, boids);
+        }
+    }
 }
