@@ -30,9 +30,9 @@
         auto entity{ this->getCameraId() };
         this->getRegistry().emplace<Scene::Control>(entity);
         this->getRegistry().emplace<Scene::Position>(entity, ::glm::vec3{
-            Scene::BoidBehavior::mapSize.x / 2
-            , Scene::BoidBehavior::mapSize.y / 2
-            , -Scene::BoidBehavior::mapSize.z * 2.5f
+            Scene::BoidBehavior::mapSize.x / 2.f
+            , Scene::BoidBehavior::mapSize.y / 2.f
+            , -Scene::BoidBehavior::mapSize.z * 2.f
         });
         this->getRegistry().emplace<Scene::Direction>(entity, ::glm::vec3{ 0.0f, .0f, 1.0f });
         this->getRegistry().emplace<Scene::Velocity>(entity).setMaximumSpeed(1000.f);
@@ -126,15 +126,13 @@ void ::xrn::bsim::Scene::createBoids()
     this->getRegistry().storage<Scene::BoidBehavior::Boid>().reserve(Scene::BoidBehavior::numberOfBoids);
 
     // find size of each thread vectors
-    ::std::size_t containerSize{ (Scene::BoidBehavior::numberOfBoids % Scene::numberOfThread == 0)
-        ? Scene::BoidBehavior::numberOfBoids / Scene::numberOfThread
-        : Scene::BoidBehavior::numberOfBoids / Scene::numberOfThread + 1
+    ::std::size_t containerSize{ (Scene::BoidBehavior::numberOfBoids % Scene::BoidBehavior::numberOfThread == 0)
+        ? Scene::BoidBehavior::numberOfBoids / Scene::BoidBehavior::numberOfThread
+        : Scene::BoidBehavior::numberOfBoids / Scene::BoidBehavior::numberOfThread + 1
     };
     for (auto& vector : m_entities) {
         vector.reserve(containerSize);
     }
-
-    auto modelBuilder{ ::xrn::engine::vulkan::Model::createModelBuilder("Boid") };
 
     // create the boids
     auto vectorIndex{ 0uz };
@@ -147,37 +145,40 @@ void ::xrn::bsim::Scene::createBoids()
             ++vectorIndex;
         }
 
-        auto entity{ this->getRegistry().create() };
-        m_entities[vectorIndex].push_back(entity);
+        auto boid{ this->getRegistry().create() };
+        m_entities[vectorIndex].push_back(boid);
 
-        auto model{ ::std::make_unique<::xrn::engine::vulkan::Model>(this->getVulkanDevice(), modelBuilder) };
-        this->initBoid(entity, ::std::move(model));
+        this->initBoid(boid);
     }
 
+    // auto boids{ this->getRegistry().view<Scene::BoidBehavior::Boid>() };
+    // this->initBoids(boids.begin(), boids.end(), modelBuilder);
+
     // create the threads
-    for (auto i{ 0uz }; i < Scene::numberOfThread; ++i) {
+    for (auto i{ 0uz }; i < Scene::BoidBehavior::numberOfThread; ++i) {
         m_threads.push(&Scene::updateBoids, this, i);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////
 void ::xrn::bsim::Scene::initBoid(
-    ::entt::entity entity
-    , ::std::unique_ptr<::xrn::engine::vulkan::Model> model
+    ::entt::entity boid
 )
 {
-    this->getRegistry().emplace<Scene::Transform3d>(entity, ::std::move(model));
+    this->getRegistry().emplace<Scene::Transform3d>(
+        boid
+        , ::xrn::engine::vulkan::Model::createFromFile(this->getVulkanDevice(), "Boid")
+    );
 
     const auto& position{ this->getRegistry().emplace<Scene::Position>(
-        entity
+        boid
         , ::xrn::rng(0, static_cast<int>(Scene::BoidBehavior::mapSize.x))
         , ::xrn::rng(0, static_cast<int>(Scene::BoidBehavior::mapSize.y))
         , ::xrn::rng(0, static_cast<int>(Scene::BoidBehavior::mapSize.z))
     ) };
 
     this->getRegistry().emplace<Scene::Velocity>(
-        entity
-        // , 100, 0, 0
+        boid
         , ::xrn::rng(-100, 100)
         , ::xrn::rng(-100, 100)
         , ::xrn::rng(-100, 100)
@@ -187,16 +188,14 @@ void ::xrn::bsim::Scene::initBoid(
         )) / 1000.f
     ).setMaximumSpeed(Scene::BoidBehavior::maxSpeed);
 
-    this->getRegistry().emplace<Scene::Acceleration>(entity);
+    this->getRegistry().emplace<Scene::Acceleration>(boid);
 
-    this->getRegistry().emplace<Scene::Scale>(entity, .12f);
-    this->getRegistry().emplace<Scene::Direction>(entity);
-
-    this->getRegistry().emplace<Scene::BoidBehavior::Boid>(entity);
+    this->getRegistry().emplace<Scene::Scale>(boid, .12f);
+    this->getRegistry().emplace<Scene::Direction>(boid);
 
     if constexpr (Scene::BoidBehavior::enableSpacePartitioning) {
         const auto index{ this->getPartitionIndex(*position) };
-        m_partitions[index.x][index.y][index.z].push_back(entity);
+        m_partitions[index.x][index.y][index.z].push_back(boid);
     }
 }
 
