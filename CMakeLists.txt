@@ -12,8 +12,8 @@ set(XRN_ERROR_LIMIT 1)
 
 # dependencies
 set(XRN_PERSONAL_DEPENDENCIES xrnLog xrnMeta xrnUtil xrnEcs xrnNetwork xrnEngine) # include other xrn projects
-set(XRN_LIBRARIES_REQUIRED glfw/3.3.7 entt/3.10.1 spdlog/1.10.0)
-set(XRN_LIBRARIES_REQUIREMENTS Vulkan glfw3 EnTT fmt Threads spdlog fmt) # find_package
+set(XRN_LIBRARIES_REQUIRED glfw/3.3.7 entt/3.10.1 spdlog/1.11.0)
+set(XRN_LIBRARIES_REQUIREMENTS Vulkan glfw3 EnTT Threads spdlog fmt) # find_package
 set(XRN_LIBRARIES_DEPENDENCIES Vulkan::Vulkan EnTT::EnTT fmt::fmt Threads::Threads CONAN_PKG::glfw CONAN_PKG::spdlog CONAN_PKG::fmt) # target_link_libraries
 set(XRN_LIBRARIES_HEADERS glfw3 EnTT spdlog fmt) # include_directories()
 
