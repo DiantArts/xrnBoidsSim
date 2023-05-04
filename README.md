@@ -1,7 +1,7 @@
 # xrnBoidsSim
 [![Continous Integration](https://github.com/DiantArts/xrnBoidsSim/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/DiantArts/xrnBoidsSim/actions/workflows/continuous-integration.yml)
 
-# Video example:
+# Video example of 25'000 boids:
 [![Video example](https://i3.ytimg.com/vi/v1IAG6-MOts/maxresdefault.jpg)](https://youtu.be/v1IAG6-MOts)
 
 # How to run
