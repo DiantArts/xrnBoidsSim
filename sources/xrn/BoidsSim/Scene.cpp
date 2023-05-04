@@ -167,7 +167,8 @@ void ::xrn::bsim::Scene::initBoid(
 {
     this->getRegistry().emplace<Scene::Transform3d>(
         boid
-        , ::xrn::engine::vulkan::Model::createFromFile(this->getVulkanDevice(), "Boid")
+        // , ::xrn::engine::vulkan::Model::createFromFile(this->getVulkanDevice(), "Boid")
+        , ::xrn::engine::vulkan::Model::createFromFile(this->getVulkanDevice(), "Cube3")
     );
 
     const auto& position{ this->getRegistry().emplace<Scene::Position>(
@@ -190,7 +191,7 @@ void ::xrn::bsim::Scene::initBoid(
 
     this->getRegistry().emplace<Scene::Acceleration>(boid);
 
-    this->getRegistry().emplace<Scene::Scale>(boid, .12f);
+    // this->getRegistry().emplace<Scene::Scale>(boid, .12f); // boid scale
     this->getRegistry().emplace<Scene::Direction>(boid);
 
     if constexpr (Scene::BoidBehavior::enableSpacePartitioning) {

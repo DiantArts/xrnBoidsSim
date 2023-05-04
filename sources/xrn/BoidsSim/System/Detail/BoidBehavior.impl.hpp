@@ -12,10 +12,10 @@ struct PartitionIndex {
         , y{ 0 }
         , z{ 0 }
     {}
-    constexpr PartitionIndex(int x, int y, int z)
-        : x{ static_cast<::std::uint16_t>(x) }
-        , y{ static_cast<::std::uint16_t>(y) }
-        , z{ static_cast<::std::uint16_t>(z) }
+    constexpr PartitionIndex(int otherX, int otherY, int otherZ)
+        : x{ static_cast<::std::uint16_t>(otherX) }
+        , y{ static_cast<::std::uint16_t>(otherY) }
+        , z{ static_cast<::std::uint16_t>(otherZ) }
     {}
     constexpr PartitionIndex(const ::glm::vec3& vec)
         : x{ static_cast<::std::uint16_t>(vec.x) }
@@ -33,6 +33,13 @@ consteval auto getNumberOfPartition(
     , double perceptionRadius
 ) -> ::xrn::bsim::system::detail::PartitionIndex
 {
+#ifdef __clang__
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wnarrowing"
+#elif __GNUC__
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wnarrowing"
+#endif
     // https://stackoverflow.com/a/66146159
     auto ceil{
         [](double f) -> int {
@@ -40,6 +47,11 @@ consteval auto getNumberOfPartition(
             return static_cast<int>(f > i ? i + 1 : i);
         }
     };
+#ifdef __clang__
+    #pragma clang diagnostic pop
+#elif __GNUC__
+    #pragma GCC diagnostic pop
+#endif
 
     // testing the lambda works as intended
     static_assert(ceil(0.0) == 0);
